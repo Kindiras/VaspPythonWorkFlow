@@ -1,0 +1,33 @@
+run_dir: /scratch/ikhatri/TaC_Elastics/Nruns
+pot_type: PAW_PBE
+delta_list:
+  begin: -0.06
+  end: 0.06
+  sample_points: 48
+incar:
+  ENCUT: 860
+  EDIFF: 1e-06    
+  EDIFFG: -0.01
+  PREC: Normal
+  ISTART: 0
+  ISMEAR: 0
+  ISPIN: 1
+  SIGMA: 0.05
+  NSW: 40
+  IBRION: 2
+  ISIF: 2
+  POTIM: 0.3
+  NCORE: 4
+  LCHARG: False
+  LWAVE: False   
+  NELMIN: 3
+  LREAL: False
+
+kpoints:
+  density: 3000
+  force_gamma: true
+
+poscar:
+  template: POSCAR   
+
+repl_elems: {'Ta': 'Ta_pv','C': 'C'}  
