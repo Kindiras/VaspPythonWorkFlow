@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 
-paths = "//scratch/ikhatri/TaC_B1_SuperCells/3By3By3Tatom216"
+paths = "/scratch/ikhatri/TaC_B1_SuperCells/2By2By3Tatom96"
 os.chdir(paths)
 os.mkdir("RESULTS")
 def sort_numeric_strings(nums_str):
@@ -44,8 +44,8 @@ for kdr in kpdirs:
     kPos = kPos + 1    
     os.chdir('../')   
 
-colors = ['black','gray','gold','green','red','chocolate']
-#colors = ['black','gray','gainsboro','maroon','red','chocolate','peru','gold','lawngreen','green','cyan','blue']
+#colors = ['black','gray','gold','green','red','chocolate']
+colors = ['black','gray','gainsboro','maroon','red','chocolate','peru','gold','lawngreen','green','cyan','blue','gold','red']
 #plt.plot(EK,Energy)
 #plt.savefig("/scratch/ikhatri/DFT_TaC/TaC_ZB/RESULTS/EnergyEncutKpoint.pdf")
 #plt.close()
