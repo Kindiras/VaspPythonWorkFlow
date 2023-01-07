@@ -12,6 +12,8 @@ matplotlib.use('Agg')
 import datetime
 import pymatgen as mg
 from pymatgen.io import vasp
+from scipy.optimize import curve_fit as cf
+import matplotlib.pyplot as plt
 
 
 # environmental variable or manual setting these lines required
@@ -47,6 +49,21 @@ def fileload(filename):
             file_dict = yaml.load(f,Loader=yaml.FullLoader)
     return file_dict
     
+
+def filedump(dict_to_file, filename):
+    """
+
+    Dump a json or specs file, determined by the extension. Indentation of json
+    and flow style of yaml is set.
+
+    """
+
+    with open(filename, 'w') as f:
+        if filename.endswith('.json'):
+            json.dump(dict_to_file, f, indent=4)
+        elif filename.endswith('.yaml'):
+            yaml.dump(dict_to_file, f, default_flow_style=False)
+
 
 
 def get_structure(run_specs):
@@ -319,6 +336,126 @@ def dumpFile(filename,inData):
     print( "hbreak",' "\n' + '=' * 100 + '\n" ')  
     #process = subprocess.call(arg,shell=True)
     print(p1)   """         
+
+
+
+
+
+def get_test_type_strain_delta_list():
+    
+    strain_matrix = [] # 3x3 strain matrix D => a = aD
+    test_type_list = ["c11+2c12", "c11-c12", "c44"]
+
+    strain_matrix.append(lambda delta: np.array([[1 + delta, 0, 0],
+                                                   [0, 1 + delta, 0],
+                                                   [0, 0, 1 + delta]]))
+
+    strain_matrix.append(lambda delta: np.array([[1 + delta, 0, 0],
+                                                   [0, 1 - delta, 0],
+                                                   [0, 0, 1 + delta ** 2 / (1 - delta ** 2)]]))
+
+    strain_matrix.append(lambda delta: np.array([[1, delta/2, 0],
+                                                   [delta/2, 1, 0],
+                                                   [0, 0, 1 + delta ** 2 / (4 - delta ** 2)]]))
+
+    return test_type_list, strain_matrix
+
+
+
+
+def curve_fit(fit_eqn, X, Y, p0=None, sigma=None, absolute_sigma=False, plot=False, on_figs=None, **kw):
+    """
+    Fit the two equal length arrays to a certain function Y = f(X).
+
+    Parameters
+    ----------
+    X: array
+    Y: array
+    plot: bool
+        plot figures or not. Default to False.
+    on_figs: list/int
+        the current figure numbers to plot to, default to new figures
+
+    Returns
+    -------
+    a dict, containing
+        'params': fitting parameters
+        'r_squared': value for evaluating error
+        'fitted_data': a dict that has 2D array of fitted data
+            easily to Pandas DataFrame by pd.DataFrame(**returned_dict['fitted_data'])
+        'ax': the axes reference, if return_refs == True
+    """
+    X = np.array(X)
+    Y = np.array(Y)
+    popt, pcov = cf(fit_eqn, X, Y, p0, sigma, absolute_sigma, **kw)
+    X_fit = np.linspace(sorted(X)[0], sorted(X)[-1], 1000)
+    Y_fit = fit_eqn(X_fit, *popt)
+    Y_fit_eqlen = fit_eqn(X, *popt)
+    r_squared = get_r_squared(Y, Y_fit_eqlen)
+    data = np.column_stack((X_fit, Y_fit))
+    col_names = ['X_fit', 'Y_fit']
+
+    return_dict = {'params': popt, 'r_squared': r_squared,
+        'fitted_data': {'columns': col_names, 'data': data}}
+
+    if plot:
+        initiate_figs(on_figs)
+        plt.plot(X, Y, 'o')
+        plt.plot(X_fit, Y_fit, '-')
+        axes = {'ax': plt.gca()}
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.tight_layout()
+        return_dict.update(axes)
+
+    return return_dict
+
+
+
+def initiate_figs(on_figs):
+    if on_figs is None:
+        plt.figure()
+    elif isinstance(on_figs, int):
+        plt.figure(on_figs)
+    else:
+        plt.figure(on_figs.pop(0))
+
+
+
+
+def central_poly(X, a, b, c):
+    return b * X**3 + a * X**2 + c
+
+
+
+def get_r_squared(Y, Y_fit_eqlen):
+    ss_resid = np.sum((Y_fit_eqlen - Y) ** 2)
+    Y_avg = np.sum(Y) / len(Y)
+    ss_total = np.sum((Y - Y_avg) ** 2)
+    r_squared = 1 - ss_resid / ss_total
+    return r_squared
+
+
+
+def solve(combined_econst_array):
+    """
+
+    Solves for the elastic constants from the matrix and coeffs.
+
+
+    Used in combination with the function get_test_type_strain_delta_list. The
+    argument combined_econst_array is an array of the second order polynomial
+    coefficients coming from the runs with various test_type, in the same order.
+
+    """
+    econsts_str = ["C11", "C12", "C44"]
+    coeff_matrix = np.array([[3/2., 3, 0],
+                                 [1, -1, 0],
+                                 [0, 0, 1/2.]])
+
+    solved = np.linalg.solve(coeff_matrix, combined_econst_array)
+    return dict(zip(econsts_str, solved))
+
 
 
 def run_vasp():
